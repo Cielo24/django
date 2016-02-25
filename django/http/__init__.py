@@ -657,7 +657,10 @@ class HttpResponse(object):
         If it is a ``datetime.datetime`` object then ``max_age`` will be calculated.
 
         """
-        self.cookies[key] = value
+        # bug: compliant key distinguishes between implicit (serving domain) and explicit example.com
+        # fortunately, the default path is "/" and is application independent
+        compliant_key = (key, path, domain)
+        self.cookies[compliant_key] = value
         if expires is not None:
             if isinstance(expires, datetime.datetime):
                 if timezone.is_aware(expires):
@@ -671,21 +674,21 @@ class HttpResponse(object):
                 expires = None
                 max_age = max(0, delta.days * 86400 + delta.seconds)
             else:
-                self.cookies[key]['expires'] = expires
+                self.cookies[compliant_key]['expires'] = expires
         if max_age is not None:
-            self.cookies[key]['max-age'] = max_age
+            self.cookies[compliant_key]['max-age'] = max_age
             # IE requires expires, so set it if hasn't been already.
             if not expires:
-                self.cookies[key]['expires'] = cookie_date(time.time() +
+                self.cookies[compliant_key]['expires'] = cookie_date(time.time() +
                                                            max_age)
         if path is not None:
-            self.cookies[key]['path'] = path
+            self.cookies[compliant_key]['path'] = path
         if domain is not None:
-            self.cookies[key]['domain'] = domain
+            self.cookies[compliant_key]['domain'] = domain
         if secure:
-            self.cookies[key]['secure'] = True
+            self.cookies[compliant_key]['secure'] = True
         if httponly:
-            self.cookies[key]['httponly'] = True
+            self.cookies[compliant_key]['httponly'] = True
 
     def set_signed_cookie(self, key, value, salt='', **kwargs):
         value = signing.get_cookie_signer(salt=key + salt).sign(value)
